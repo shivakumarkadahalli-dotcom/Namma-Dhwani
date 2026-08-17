@@ -89,10 +89,12 @@ const AppRouter: React.FC = () => {
 
     // Officer Routes
     if (path === '/officer/dashboard') return <OfficerDashboard />;
+    if (path === '/officer/profile') return <CitizenProfilePage />;
     if (path.startsWith('/officer/complaints/')) return <OfficerComplaintDetail />;
 
     // Admin Routes
     if (path === '/admin/dashboard') return <AdminDashboard />;
+    if (path === '/admin/profile') return <CitizenProfilePage />;
     if (path === '/admin/map') return <AdminMapPage />;
     if (path === '/admin/insights') return <AdminInsightsPage />;
     if (path.startsWith('/admin/insights/')) return <AdminInsightDetail />;
