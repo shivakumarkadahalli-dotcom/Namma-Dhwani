@@ -141,7 +141,7 @@ export const AuthLoginPage: React.FC<AuthLoginPageProps> = ({ defaultRole }) => 
       setAuthSuccess(true);
       showToast('Authentication Successful', `Welcome to NammaDhwani, ${res.user.name}`, 'success');
       setTimeout(() => {
-        switchRole(roleToLogin);
+        switchRole(roleToLogin, undefined, res.user);
         navigate(`/${roleToLogin}/dashboard`);
       }, 700);
     } else {
@@ -173,9 +173,9 @@ export const AuthLoginPage: React.FC<AuthLoginPageProps> = ({ defaultRole }) => 
 
     if (res.success) {
       setAuthSuccess(true);
-      showToast('Account Registered', res.message || 'Welcome email dispatched via Resend!', 'success');
+      showToast('Account Registered', `Welcome, ${res.user?.name || fullName}! Your CivicLoop account is ready.`, 'success');
       setTimeout(() => {
-        switchRole('citizen');
+        switchRole('citizen', undefined, res.user);
         navigate('/citizen/dashboard');
       }, 800);
     } else {

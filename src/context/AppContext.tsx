@@ -60,7 +60,7 @@ interface AppContextType {
   isAuthenticated: boolean;
   currentUser: UserProfile | null;
   activeRole: Role | null;
-  switchRole: (role: Role, department?: string) => void;
+  switchRole: (role: Role, department?: string, authenticatedUser?: UserProfile) => void;
   logout: () => void;
   loginOfficer: (department: string, email: string, password: string) => AuthValidationResult;
   logoutOfficer: () => void;
@@ -159,12 +159,12 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   const [language, setLanguageState] = useState<Language>(() => currentUser?.language || 'en');
 
-  const switchRole = (role: Role, department?: string) => {
+  const switchRole = (role: Role, department?: string, authenticatedUser?: UserProfile) => {
     setIsAuthenticated(true);
     setActiveRole(role);
-    let userToSet = INITIAL_USERS[role] || null;
+    let userToSet = authenticatedUser || INITIAL_USERS[role] || null;
 
-    if (role === 'officer') {
+    if (role === 'officer' && !authenticatedUser) {
       if (department && DEPARTMENT_OFFICERS[department]) {
         userToSet = { ...DEPARTMENT_OFFICERS[department] };
       } else {
@@ -179,7 +179,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           userToSet = { ...DEPARTMENT_OFFICERS['Roads & Infrastructure'] };
         }
       }
-    } else {
+    } else if (!authenticatedUser) {
       try {
         const savedUser = localStorage.getItem(`civicloop_user_${role}`);
         if (savedUser) {
