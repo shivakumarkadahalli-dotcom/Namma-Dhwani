@@ -38,16 +38,10 @@ export interface SendEmailResult {
   */
 export async function sendEmail(payload: SendEmailPayload): Promise<SendEmailResult> {
   const { to, subject, html, emailType, metadata } = payload;
+  const targetRecipient = to;
   const { client, fromEmail } = getResendClient();
 
-  // Smart recipient targeting: For Resend testing domain (onboarding@resend.dev),
-  // non-verified target emails are auto-directed to the account owner (shivakumarkadahalli@gmail.com)
-  const isTestingDomain = fromEmail.includes('onboarding@resend.dev');
-  const targetRecipient = (isTestingDomain && (to.includes('@namnadhwani.gov.in') || to.includes('@civicloop.demo')))
-    ? 'shivakumarkadahalli@gmail.com'
-    : to;
-
-  console.log(`[Resend Email Service] Preparing dispatch for type "${emailType}" to "${targetRecipient}" (Original target: "${to}")`);
+  console.log(`[Resend Email Service] Preparing dispatch for type "${emailType}" to "${to}"`);
 
   if (!client) {
     console.log(`[Resend Email Service - Local Fallback Mode]`);
@@ -66,21 +60,10 @@ export async function sendEmail(payload: SendEmailPayload): Promise<SendEmailRes
   try {
     let data = await client.emails.send({
       from: fromEmail,
-      to: targetRecipient,
+      to,
       subject: `[${emailType.toUpperCase()}] ${subject}`,
       html,
     });
-
-    // If Resend returns a testing domain restriction error, retry with the verified owner address
-    if (data.error && data.error.message?.includes('testing emails to your own email address')) {
-      console.warn(`[Resend Testing Domain Redirect] Retrying dispatch to shivakumarkadahalli@gmail.com`);
-      data = await client.emails.send({
-        from: fromEmail,
-        to: 'shivakumarkadahalli@gmail.com',
-        subject: `[${emailType.toUpperCase()}] ${subject}`,
-        html,
-      });
-    }
 
     if (data.error) {
       console.error(`[Resend Email Error]:`, data.error);

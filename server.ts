@@ -1165,6 +1165,7 @@ app.post("/api/complaints", async (req, res) => {
       await supabaseAdmin.from("complaints").upsert({
         id: complaintId,
         citizen_name: complaint.citizenName || "Citizen User",
+        citizen_email: complaint.citizenEmail || null,
         title: complaint.title,
         description: complaint.description,
         category: complaint.category,
@@ -1248,7 +1249,15 @@ app.patch("/api/complaints/:id/status", async (req, res) => {
     const nextStatus = officerEvidenceImage ? "Awaiting Verification" : (status || "In Progress");
 
     const supabaseAdmin = getSupabaseAdmin();
+    let savedComplaint: { citizen_email?: string | null; citizen_name?: string | null; title?: string | null } | null = null;
     if (supabaseAdmin) {
+      const { data } = await supabaseAdmin
+        .from("complaints")
+        .select("citizen_email, citizen_name, title")
+        .eq("id", id)
+        .maybeSingle();
+      savedComplaint = data;
+
       await supabaseAdmin
         .from("complaints")
         .update({
@@ -1275,16 +1284,16 @@ app.patch("/api/complaints/:id/status", async (req, res) => {
     const verificationUrl = `${appUrl}/citizen/complaints/${id}`;
 
     // Dispatch Resolution Evidence Verification Request Email to Citizen via Resend
-    const citizenEmail = req.body.citizenEmail || "citizen@nammadhwani.gov.in";
-    const emailResult = await sendResolutionVerificationEmail({
+    const citizenEmail = req.body.citizenEmail || savedComplaint?.citizen_email;
+    const emailResult = citizenEmail ? await sendResolutionVerificationEmail({
       to: citizenEmail,
-      citizenName: req.body.citizenName || "Citizen User",
+      citizenName: req.body.citizenName || savedComplaint?.citizen_name || "Citizen User",
       complaintId: id,
-      title: req.body.title || "Civic Grievance",
+      title: req.body.title || savedComplaint?.title || "Civic Grievance",
       officerName: officerName || "Assigned Officer",
       resolutionNotes: officerResolutionNote || "Field work completed with proof.",
       verificationUrl,
-    });
+    }) : { success: false, error: "No citizen email is saved for this complaint." };
 
     return res.json({
       success: true,
@@ -1310,7 +1319,15 @@ app.post("/api/complaints/:id/verify", async (req, res) => {
     const nextStatus = feedback === "fully_fixed" ? "Resolved" : feedback === "partially_fixed" ? "Partially Resolved" : "Reopened";
 
     const supabaseAdmin = getSupabaseAdmin();
+    let savedComplaint: { citizen_email?: string | null; citizen_name?: string | null; title?: string | null } | null = null;
     if (supabaseAdmin) {
+      const { data } = await supabaseAdmin
+        .from("complaints")
+        .select("citizen_email, citizen_name, title")
+        .eq("id", id)
+        .maybeSingle();
+      savedComplaint = data;
+
       await supabaseAdmin
         .from("complaints")
         .update({
@@ -1337,15 +1354,15 @@ app.post("/api/complaints/:id/verify", async (req, res) => {
 
     // Dispatch Problem Solved Email to Citizen via Resend Platform when issue is fixed
     if (feedback === "fully_fixed") {
-      const citizenEmail = req.body.citizenEmail || "citizen@nammadhwani.gov.in";
-      emailResult = await sendProblemSolvedEmail({
+      const citizenEmail = req.body.citizenEmail || savedComplaint?.citizen_email;
+      emailResult = citizenEmail ? await sendProblemSolvedEmail({
         to: citizenEmail,
-        citizenName: citizenName || "Citizen User",
+        citizenName: citizenName || savedComplaint?.citizen_name || "Citizen User",
         complaintId: id,
-        title: req.body.title || "Civic Grievance",
+        title: req.body.title || savedComplaint?.title || "Civic Grievance",
         resolutionNotes: rebuttalNotes || "Grievance confirmed fully fixed by citizen.",
         trackingUrl,
-      });
+      }) : { success: false, error: "No citizen email is saved for this complaint." };
     }
 
     return res.json({

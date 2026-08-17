@@ -49,6 +49,7 @@ CREATE TABLE IF NOT EXISTS public.complaints (
     id TEXT PRIMARY KEY, -- e.g. GRV-2026-081042
     citizen_id UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
     citizen_name TEXT NOT NULL,
+    citizen_email TEXT,
     title TEXT NOT NULL,
     description TEXT NOT NULL,
     category TEXT NOT NULL,
