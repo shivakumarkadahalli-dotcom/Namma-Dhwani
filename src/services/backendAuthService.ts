@@ -1,6 +1,5 @@
 import { UserProfile, Role } from '../types';
 import { supabase } from './supabaseClient';
-import { authenticateOfficerCredentials } from './officerAuthService';
 
 export interface RegisterUserPayload {
   name: string;
@@ -78,17 +77,6 @@ export async function loginUserBackend(
   role: Role = 'citizen',
   department?: string
 ): Promise<AuthResponse> {
-  // If officer role, check officer roster first
-  if (role === 'officer' && department) {
-    const officerValidation = authenticateOfficerCredentials(department, email, password);
-    if (officerValidation.success && officerValidation.officer) {
-      return {
-        success: true,
-        user: officerValidation.officer,
-      };
-    }
-  }
-
   try {
     const response = await fetch('/api/auth/login', {
       method: 'POST',

@@ -1047,18 +1047,28 @@ app.post("/api/auth/login", async (req, res) => {
     const supabaseAdmin = getSupabaseAdmin();
 
     if (supabaseAdmin) {
+      const { data: authData, error: authError } = await supabaseAdmin.auth.signInWithPassword({ email, password });
+      if (authError || !authData.user) {
+        return res.status(401).json({ error: "Invalid email or password" });
+      }
+
       const { data: profile, error } = await supabaseAdmin
         .from("profiles")
         .select("*")
-        .eq("email", email)
+        .eq("id", authData.user.id)
         .single();
 
       if (!error && profile) {
+        if (profile.role !== role) {
+          return res.status(403).json({ error: `This account is registered as ${profile.role}.` });
+        }
         return res.json({
           success: true,
           user: profile,
         });
       }
+
+      return res.status(404).json({ error: "User profile was not found." });
     }
 
     // Fallback response for active workspace testing
@@ -1121,6 +1131,20 @@ app.post("/api/auth/reset-password", async (req, res) => {
 });
 
 // 10. Complaints: List & Query Endpoint
+app.get("/api/officers", async (_req, res) => {
+  const supabaseAdmin = getSupabaseAdmin();
+  if (!supabaseAdmin) return res.status(503).json({ error: "Supabase is not configured" });
+
+  const { data, error } = await supabaseAdmin
+    .from("profiles")
+    .select("id, name, department, designation, ward, language, is_available, is_supervisor, avatar_url")
+    .eq("role", "officer")
+    .eq("is_available", true);
+
+  if (error) return res.status(500).json({ error: error.message });
+  return res.json({ officers: data || [] });
+});
+
 app.get("/api/complaints", async (req, res) => {
   try {
     const { department, status, ward } = req.query;

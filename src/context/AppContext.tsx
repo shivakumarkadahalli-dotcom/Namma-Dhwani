@@ -307,6 +307,35 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   // Data Collections with Versioned Storage Migration
   const [officerRosters, setOfficerRosters] = useState<Record<string, UserProfile[]>>(DEPARTMENT_OFFICERS_ROSTER);
 
+  useEffect(() => {
+    fetch('/api/officers')
+      .then((response) => response.ok ? response.json() : null)
+      .then((payload) => {
+        if (!Array.isArray(payload?.officers)) return;
+        const liveRosters: Record<string, UserProfile[]> = {};
+        for (const officer of payload.officers) {
+          if (!officer.department) continue;
+          const profile: UserProfile = {
+            id: officer.id,
+            name: officer.name,
+            email: '',
+            role: 'officer',
+            department: officer.department,
+            designation: officer.designation || undefined,
+            phone: officer.phone || undefined,
+            ward: officer.ward || undefined,
+            language: officer.language || 'en',
+            isAvailable: officer.is_available !== false,
+            isSupervisor: officer.is_supervisor === true,
+            avatarUrl: officer.avatar_url || undefined,
+          };
+          (liveRosters[profile.department] ||= []).push(profile);
+        }
+        if (Object.keys(liveRosters).length > 0) setOfficerRosters(liveRosters);
+      })
+      .catch(() => undefined);
+  }, []);
+
   // Single Unified Mutable State for ALL Grievances
   const [complaints, setComplaints] = useState<Complaint[]>(() => {
     return buildUnifiedGrievances(

@@ -32,7 +32,7 @@ interface AuthLoginPageProps {
 }
 
 export const AuthLoginPage: React.FC<AuthLoginPageProps> = ({ defaultRole }) => {
-  const { navigate, switchRole, loginOfficer, showToast, isAuthenticated, activeRole, language, setLanguage, t } = useApp();
+  const { navigate, switchRole, showToast, isAuthenticated, activeRole, language, setLanguage, t } = useApp();
 
   const [selectedRole, setSelectedRole] = useState<Role>('citizen');
   const [authTab, setAuthTab] = useState<'login' | 'register'>('login');
@@ -85,14 +85,8 @@ export const AuthLoginPage: React.FC<AuthLoginPageProps> = ({ defaultRole }) => 
       setEmail('citizen@civicloop.demo');
       setPassword('demo123');
     } else if (role === 'officer') {
-      const deptAccounts = demoAccountsByDept[dept];
-      if (deptAccounts && deptAccounts.length > 0) {
-        setEmail(deptAccounts[0].email);
-        setPassword(deptAccounts[0].password);
-      } else {
-        setEmail('anita@namnadhwani.gov.in');
-        setPassword('Anita@123');
-      }
+      setEmail('');
+      setPassword('');
     } else if (role === 'admin') {
       setEmail('admin@civicloop.demo');
       setPassword('demo123');
@@ -118,12 +112,13 @@ export const AuthLoginPage: React.FC<AuthLoginPageProps> = ({ defaultRole }) => 
     setIsSubmitting(true);
 
     if (roleToLogin === 'officer') {
-      const res = loginOfficer(deptToLogin, email, password);
+      const res = await loginUserBackend(email, password, 'officer', deptToLogin);
       setIsSubmitting(false);
-      if (res.success && res.officer) {
+      if (res.success && res.user) {
         setAuthSuccess(true);
-        showToast('Authentication Successful', `Welcome, ${res.officer.name} (${res.officer.department})`, 'success');
+        showToast('Authentication Successful', `Welcome, ${res.user.name} (${res.user.department})`, 'success');
         setTimeout(() => {
+          switchRole('officer', undefined, res.user);
           navigate('/officer/dashboard');
         }, 600);
       } else {

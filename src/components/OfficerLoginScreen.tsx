@@ -6,6 +6,7 @@ import {
   getDemoAccountsByDepartment, 
   authenticateOfficerCredentials 
 } from '../services/officerAuthService';
+import { loginUserBackend } from '../services/backendAuthService';
 import { 
   Lock, 
   ShieldCheck, 
@@ -32,11 +33,11 @@ export const OfficerLoginScreen: React.FC<OfficerLoginScreenProps> = ({
   initialDepartment = 'Roads & Infrastructure',
   onSuccess
 }) => {
-  const { navigate, loginOfficer, showToast } = useApp();
+  const { navigate, switchRole, showToast } = useApp();
 
   const [department, setDepartment] = useState<string>(initialDepartment);
-  const [email, setEmail] = useState<string>('anita@namnadhwani.gov.in');
-  const [password, setPassword] = useState<string>('Anita@123');
+  const [email, setEmail] = useState<string>('');
+  const [password, setPassword] = useState<string>('');
   const [showPassword, setShowPassword] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
@@ -68,7 +69,7 @@ export const OfficerLoginScreen: React.FC<OfficerLoginScreenProps> = ({
     showToast('Credentials Loaded', `Loaded credentials for ${acc.name} (${acc.department})`, 'info');
   };
 
-  const handleLoginSubmit = (e: React.FormEvent) => {
+  const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage(null);
 
@@ -84,15 +85,17 @@ export const OfficerLoginScreen: React.FC<OfficerLoginScreenProps> = ({
 
     setIsSubmitting(true);
 
-    // Realistic authentication delay
-    setTimeout(() => {
-      setIsSubmitting(false);
+    const result = await loginUserBackend(email, password, 'officer', department);
+    setIsSubmitting(false);
 
-      const result = loginOfficer(department, email, password);
-
-      if (result.success && result.officer) {
+      if (result.success && result.user) {
+        if (result.user.department !== department) {
+          setErrorMessage(`This account belongs to ${result.user.department || 'no assigned department'}.`);
+          return;
+        }
         setAuthSuccess(true);
-        showToast('Login Successful', `Welcome, ${result.officer.name} (${result.officer.department})`, 'success');
+        showToast('Login Successful', `Welcome, ${result.user.name} (${result.user.department})`, 'success');
+        switchRole('officer', undefined, result.user);
         
         setTimeout(() => {
           if (onSuccess) {
@@ -105,7 +108,6 @@ export const OfficerLoginScreen: React.FC<OfficerLoginScreenProps> = ({
         setErrorMessage(result.error || 'Invalid officer credentials or department.');
         showToast('Authentication Failed', 'Invalid officer credentials or department.', 'error');
       }
-    }, 450);
   };
 
   return (
